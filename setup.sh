@@ -3,7 +3,10 @@
 # Exit on error
 set -e
 
-echo "🚀 Starting CamTools Easy Setup..."
+DOMAIN="camtool.site"
+EMAIL="your-email@example.com" # Should be updated by user
+
+echo "🚀 Starting CamTools SSL Setup for $DOMAIN..."
 
 # Check if Docker is installed
 if ! [ -x "$(command -v docker)" ]; then
@@ -11,9 +14,16 @@ if ! [ -x "$(command -v docker)" ]; then
   exit 1
 fi
 
-# Create necessary directories if they don't exist
-echo "📁 Creating local storage directories..."
-mkdir -p server/uploads server/output
+# Determine docker command
+if docker compose version >/dev/null 2>&1; then
+  DOCKER_CMD="docker compose"
+else
+  DOCKER_CMD="docker-compose"
+fi
+
+# Create necessary directories
+echo "📁 Creating storage and SSL directories..."
+mkdir -p server/uploads server/output certbot/conf certbot/www
 
 # Check for .env files
 if [ ! -f server/.env ]; then
@@ -21,15 +31,34 @@ if [ ! -f server/.env ]; then
   cp server/.env.example server/.env || echo "PORT=5001" > server/.env
 fi
 
-# Build and start the containers
-echo "Building and starting containers (this may take a few minutes)..."
-if docker compose version >/dev/null 2>&1; then
-  docker compose up --build -d
-else
-  docker-compose up --build -d
+# Initial run to get SSL certificate if it doesn't exist
+if [ ! -d "certbot/conf/live/$DOMAIN" ]; then
+  echo "🔒 Initial SSL Certificate Request..."
+  
+  # 1. Start a temporary webserver to handle the challenge
+  echo "Starting temporary webserver on port 3000..."
+  $DOCKER_CMD run --rm -d \
+    -p 3000:80 \
+    -v $(pwd)/certbot/www:/var/www/certbot \
+    --name temp_webserver \
+    nginx:alpine
+
+  # 2. Run Certbot to get the certificate
+  echo "Requesting certificate from Let's Encrypt..."
+  docker run --rm \
+    -v $(pwd)/certbot/conf:/etc/letsencrypt \
+    -v $(pwd)/certbot/www:/var/www/certbot \
+    certbot/certbot certonly --webroot -w /var/www/certbot \
+    -d $DOMAIN --email $EMAIL --agree-tos --no-eff-email --non-interactive
+
+  # 3. Stop temporary webserver
+  docker stop temp_webserver
 fi
 
+# Build and start the full stack
+echo "🏗️ Building and starting the full stack..."
+$DOCKER_CMD up --build -d
+
 echo "✅ Setup complete!"
-echo "🌐 Frontend is running on http://localhost"
-echo "🔌 Backend API is running on http://localhost/api"
-echo "💡 Use 'docker-compose logs -f' to see the output."
+echo "🌐 Your website is available at http://$DOMAIN:3000 (or https://$DOMAIN:3443)"
+echo "🔌 Backend API is running on http://$DOMAIN:3000/api"
