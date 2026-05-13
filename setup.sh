@@ -23,7 +23,11 @@ fi
 
 # Build and start the containers
 echo "Building and starting containers (this may take a few minutes)..."
-docker-compose up --build -d
+if docker compose version >/dev/null 2>&1; then
+  docker compose up --build -d
+else
+  docker-compose up --build -d
+fi
 
 echo "✅ Setup complete!"
 echo "🌐 Frontend is running on http://localhost"
