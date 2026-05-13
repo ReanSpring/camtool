@@ -4,7 +4,7 @@
 set -e
 
 DOMAIN="camtool.site"
-EMAIL="your-email@example.com" # Should be updated by user
+EMAIL="camtool@gmail.com"
 
 echo "🚀 Starting CamTools SSL Setup for $DOMAIN..."
 
