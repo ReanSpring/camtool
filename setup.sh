@@ -37,7 +37,7 @@ if [ ! -d "certbot/conf/live/$DOMAIN" ]; then
   
   # 1. Start a temporary webserver to handle the challenge
   echo "Starting temporary webserver on port 3000..."
-  $DOCKER_CMD run --rm -d \
+  docker run --rm -d \
     -p 3000:80 \
     -v $(pwd)/certbot/www:/var/www/certbot \
     --name temp_webserver \
