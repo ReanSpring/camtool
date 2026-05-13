@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  server:
+    build: ./server
+    container_name: camtool-server
+    environment:
+      - PORT=5001
+      - NODE_ENV=production
+    volumes:
+      - ./server/uploads:/app/uploads
+      - ./server/output:/app/output
+    restart: always
+
+  client:
+    build:
+      context: ./client
+      args:
+        - VITE_API_URL=/api
+    container_name: camtool-client
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    restart: always
